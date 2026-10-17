@@ -30,10 +30,17 @@ class SkillRouter:
         ctx: AgentContext,
         max_count: int = 3,
     ) -> List[str]:
+        """Select applicable skills for ``ctx``.
+
+        ``max_count`` bounds only the automatic routes (manual config, market
+        regime, default fallback). Skills the user explicitly requested are
+        returned in full — an explicit selection must never be silently
+        truncated by the router.
+        """
         requested_skills = ctx.meta.get("skills_requested") or ctx.meta.get("strategies_requested", [])
         if requested_skills:
             logger.info("[SkillRouter] user-requested skills: %s", requested_skills)
-            return requested_skills[:max_count]
+            return list(requested_skills)
 
         routing_mode = self._get_routing_mode()
         if routing_mode == "manual":

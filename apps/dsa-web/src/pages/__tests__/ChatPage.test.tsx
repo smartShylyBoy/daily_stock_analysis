@@ -1430,7 +1430,7 @@ describe('ChatPage', () => {
     }));
   });
 
-  it('caps concrete skill selection at three and re-enables choices after unselecting', async () => {
+  it('allows selecting every skill without a cap and still supports unselecting', async () => {
     mockGetSkills.mockResolvedValue({
       skills: [
         { id: 'bull_trend', name: '趋势分析', description: '默认趋势' },
@@ -1449,12 +1449,26 @@ describe('ChatPage', () => {
 
     fireEvent.click(await screen.findByRole('checkbox', { name: '均线金叉' }));
     fireEvent.click(screen.getByRole('checkbox', { name: '缠论' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: '波浪理论' }));
 
+    const trend = screen.getByRole('checkbox', { name: '趋势分析' });
+    const golden = screen.getByRole('checkbox', { name: '均线金叉' });
+    const chan = screen.getByRole('checkbox', { name: '缠论' });
     const wave = screen.getByRole('checkbox', { name: '波浪理论' });
-    expect(wave).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('checkbox', { name: '均线金叉' }));
-    expect(wave).not.toBeDisabled();
+    // 默认技能 + 勾选的三个全部保留，且没有复选框被禁用
+    expect(trend).toBeChecked();
+    expect(golden).toBeChecked();
+    expect(chan).toBeChecked();
+    expect(wave).toBeChecked();
+    for (const box of [trend, golden, chan, wave]) {
+      expect(box).toBeEnabled();
+    }
+
+    fireEvent.click(golden);
+    expect(golden).not.toBeChecked();
+    expect(chan).toBeChecked();
+    expect(wave).toBeChecked();
   });
 
   it('quick questions override the current multi-skill selection', async () => {

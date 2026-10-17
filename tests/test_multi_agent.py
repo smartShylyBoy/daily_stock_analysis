@@ -552,13 +552,13 @@ class TestStrategyRouter(unittest.TestCase):
         result = router.select_strategies(ctx)
         self.assertEqual(result, ["chan_theory", "wave_theory"])
 
-    def test_user_requested_capped_at_max(self):
+    def test_user_requested_skills_are_not_truncated(self):
         from src.agent.strategies.router import StrategyRouter
         router = StrategyRouter()
         ctx = AgentContext()
         ctx.meta["strategies_requested"] = ["a", "b", "c", "d", "e"]
         result = router.select_strategies(ctx, max_count=2)
-        self.assertEqual(len(result), 2)
+        self.assertEqual(result, ["a", "b", "c", "d", "e"])
 
     @patch("src.agent.skills.router.StrategyRouter._get_routing_mode", return_value="manual")
     @patch(

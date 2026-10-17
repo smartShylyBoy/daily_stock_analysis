@@ -418,6 +418,43 @@ flowchart LR
 | Agent（智能体） | `AgentExecutor` / `AgentOrchestrator` | 工具调用循环 / 多阶段编排 |
 | Memory | `src/agent/memory.py` `AgentMemory` | 跨轮记忆，供 `SkillAggregator` 计权 |
 
+五者是一条闭环流水线上的五个环节，而非并列概念：**Skill 是知识，Strategy 是执行与度量，Tool 是数据获取，Agent 是执行体，Memory 是反馈回路**。
+
+```
+strategies/xxx.yaml  ← 同一个文件两个身份
+        │                    │
+     【Skill】            【Strategy】
+   instructions          回测评估 / StrategyEngine
+   注入 Prompt            汇总各技能意见
+        │                    ▲
+        ▼                    │
+   SkillAgent ──调用──► Tool（analyze_trend…）
+        │                    │
+        └──► AgentOpinion ───┘
+                 │
+                 ▼
+          SkillAggregator ◄──计权── AgentMemory
+                 │                  （回测胜率）
+                 ▼
+            共识结论 → Decision Agent
+```
+
+**端到端示例**（以 `ma_golden_cross` 分析 600519 为例）：
+
+1. **Skill — 定义「看什么」**：`strategies/ma_golden_cross.yaml` 用自然语言写判定标准（MA5 近 3 日上穿 MA10、金叉日量比 > 1.2 等），并声明 `required_tools: [get_daily_history, analyze_trend]`。
+2. **Agent — 加载说明书**：`SkillAgent` 读取该 YAML，把 `instructions` 注入 system prompt；`required_tools` 变为自身 `tool_names` 工具白名单（`BaseAgent` 中为 None 时才可用全部工具）。
+3. **Tool — 取数验证**：`AgentExecutor` 工具循环内调用 `get_daily_history`、`analyze_trend` 验证金叉与量能，产出结构化 `AgentOpinion`（signal / confidence / score_adjustment）。
+4. **Strategy — 执行与汇总**：各技能意见经 `StrategyEngine` 分组证据、`SkillAggregator` 加权合成共识，即「技能的执行载体」。
+5. **Memory — 反馈计权**：`AgentMemory.compute_skill_weights` 按回测胜率计权（样本 ≥ 30 时权重 = `0.5 + win_rate`，否则中性 1.0，再归一化到均值 1.0），历史上更准的技能在共识中话语权更大。
+6. **编排收口**：`AgentOrchestrator` 将共识交给 Decision Agent 出最终结论（见 7.2）。
+
+**两个易混淆点**：
+
+| 误区 | 澄清 |
+| --- | --- |
+| Skill 与 Strategy 是两套东西 | 同一个 YAML 的两副面孔：注入 Prompt 的 `instructions` 是 Skill；回测、计权、共识合成这套是 Strategy。代码上 `SkillAgent` 兼容 `strategy_id` 参数，`AgentMemory.compute_strategy_weights` 只是 `compute_skill_weights` 的兼容包装。 |
+| Tool 归某个 Agent 所有 | Tool 注册在全局 `ToolRegistry`，Agent 只是消费者；YAML 的 `required_tools` 只是为 SkillAgent 划定工具边界，避免无关取数。 |
+
 ### 7.2 多 Agent 编排
 
 ```mermaid

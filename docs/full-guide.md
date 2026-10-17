@@ -246,7 +246,7 @@ daily_stock_analysis/
 | `LOCAL_CLI_BACKEND_MAX_CONCURRENCY` | 本地 CLI backend 并发上限；范围 `1-4`，有效并发取它与 `GENERATION_BACKEND_MAX_CONCURRENCY` 的较小值 | `1` | 否 |
 | `AGENT_BACKEND` | 现有问股 Chat 的运行方式：`auto`（推荐，保持默认模型）、`litellm` 或 `codex_app_server`（实验，仅 single-agent Chat） | `auto` | 否 |
 | `AGENT_GENERATION_BACKEND` | Agent Chat 生成后端；Web 设置页仅暴露 `auto|litellm`，手写 local CLI backend 会返回 unsupported tool-calling 诊断 | `auto` | 否 |
-| `AGENT_SKILL_CONCURRENCY` | `specialist` 模式策略专家 worker 并发上限，范围 `1-4`；最多选择 4 个策略，默认 3 个并发，第 4 个进入下一批次并共享整体超时预算 | `3` | 否 |
+| `AGENT_SKILL_CONCURRENCY` | `specialist` 模式策略专家 worker 并发上限，范围 `1-4`；自动路由最多选 4 个策略，用户显式指定的技能不限数量，默认 3 个并发，超出的策略进入下一批次并共享整体超时预算 | `3` | 否 |
 | `AGENT_DATA_TOOL_TIMEOUT_S` | Agent `data` 类工具默认超时秒数；同时作为 `market` 类工具（`get_market_indices` / `get_sector_rankings` 等网络数据调用）的类别默认；`0` 表示关闭，回退到全局预算；有效超时按 first-wins 解析：显式 per-run `tool_call_timeout_seconds` > 单工具显式 `timeout_seconds` > 类别默认 > 无限制，剩余 wall-clock 预算仅作不可突破的外层 cap，`inf`/`nan`/负数降级为「无限制」；超时为 best-effort 软中断：Python 线程无法被强制停止，handler 可能在超时后继续运行，超时结果标记 `retriable: false` 并写入 `non_retriable_tool_results` 阻断重试，且为仍在后台的 handler 武装协作取消信号（`is_tool_cancellation_requested()` 与既有 `check_tool_execution()` 检查点均响应，handler 从不轮询则行为不变）以尽量减小副作用 | `0` | 否 |
 | `AGENT_SEARCH_TOOL_TIMEOUT_S` | Agent `search` 类工具默认超时秒数；`0` 表示关闭，回退到全局预算 | `0` | 否 |
 | `AGENT_ANALYSIS_TOOL_TIMEOUT_S` | Agent `analysis` 类工具默认超时秒数；`0` 表示关闭，回退到全局预算 | `0` | 否 |

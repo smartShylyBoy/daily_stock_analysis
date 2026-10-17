@@ -362,7 +362,7 @@ Phase 1 不改变 `AgentOpinion` 字段、不改变 API 返回结构、不改变
 Phase 2 只在 Phase 1/1.5/1.6/1.7/1.8/1.9 契约下新增 2–4 策略并发调度与阶段调度：
 
 - `src/agent/skills/scheduler.py::AgentSkillScheduler` 使用 thread pool 并发执行 specialist skill agents；每个 skill 使用 `AgentContext` 副本运行，并通过独立的 `copy_context()` 把主管线冻结的 target date 等 `ContextVar` 状态传播到 worker，主线程按路由顺序合并结构化 opinion，避免多个 skill 同时写共享 `ctx.opinions`。
-- specialist 最终入口最多选择 4 个策略；`AGENT_SKILL_CONCURRENCY` 控制同时运行的 worker 数，默认 `3`，范围 `1–4`。默认值下第 4 个策略进入下一 concurrency wave，不会被路由层静默丢弃。
+- specialist 最终入口的自动路由最多选择 4 个策略；用户显式指定的技能（`skills_requested`）不设数量上限，路由层不得截断。`AGENT_SKILL_CONCURRENCY` 控制同时运行的 worker 数，默认 `3`，范围 `1–4`。超出并发的策略进入下一 concurrency wave，不会被静默丢弃。
 - `AGENT_SKILL_AGENT_TIMEOUT_S` 继续作为单个 skill 的独立超时上限；Pipeline 总预算开启时，`_run_stage_agent()` 仍取 Pipeline 剩余预算与 skill 独立上限的较小值。
 - 单个 skill 超时或异常，走 Diagnostics 路径（`reason="skill_timeout"` / `"skill_error"`），进入 `ctx.meta["invalid_opinions"]`，不阻塞其他 skill 与主流程。
 - Phase 2 不改变 Baseline Evidence Chain / Diagnostics 分离原则、不改变阵营语义、不改变共识门槛、不改变 `strategy_synthesis` payload schema。
